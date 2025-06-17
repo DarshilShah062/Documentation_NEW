@@ -40,20 +40,33 @@ class DocumentProcessor:
             pinecone_key = self.get_env_variable('PINECONE_API_KEY')
             
             if not openai_key or not pinecone_key:
-                st.error("❌ Missing API keys. Please check your configuration.")
+                if hasattr(st, 'error'):
+                    st.error("❌ Missing API keys. Please check your configuration.")
+                else:
+                    print("❌ Missing API keys. Please check your configuration.")
                 return False
             
-            # Initialize embeddings
-            self.embeddings = OpenAIEmbeddings(openai_api_key=openai_key)
+            # Initialize embeddings with explicit API key
+            self.embeddings = OpenAIEmbeddings(
+                openai_api_key=openai_key,
+                model="text-embedding-3-small"  # Ensure compatibility
+            )
             
             # Initialize Pinecone
             pc = Pinecone(api_key=pinecone_key)
             index_name = self.get_env_variable('PINECONE_INDEX_NAME', 'chatbot')
             
             # Check if index exists
-            if index_name not in pc.list_indexes().names():
-                st.error(f"❌ Pinecone index '{index_name}' not found. Please create it first.")
-                return False
+            try:
+                if index_name not in pc.list_indexes().names():
+                    error_msg = f"❌ Pinecone index '{index_name}' not found. Please create it first."
+                    if hasattr(st, 'error'):
+                        st.error(error_msg)
+                    else:
+                        print(error_msg)
+                    return False
+            except Exception as e:
+                print(f"Warning: Could not verify Pinecone index: {e}")
             
             self.vectorstore = PineconeVectorStore(
                 index_name=index_name,
@@ -63,7 +76,11 @@ class DocumentProcessor:
             return True
             
         except Exception as e:
-            st.error(f"❌ Error setting up clients: {e}")
+            error_msg = f"❌ Error setting up clients: {e}"
+            if hasattr(st, 'error'):
+                st.error(error_msg)
+            else:
+                print(error_msg)
             return False
     
     def generate_file_hash(self, content):
