@@ -3,7 +3,12 @@ import streamlit as st
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain_pinecone import PineconeVectorStore
+try:
+    # Older versions of langchain_pinecone exposed `PineconeVectorStore` directly
+    from langchain_pinecone import PineconeVectorStore
+except ImportError:  # pragma: no cover - handle new package versions
+    # Newer releases renamed the class to `Pinecone`
+    from langchain_pinecone import Pinecone as PineconeVectorStore
 from pinecone import Pinecone
 import hashlib
 from datetime import datetime
@@ -169,10 +174,13 @@ class DocumentProcessor:
             processed_files = len(processed_data.get('processed_files', {}))
             unprocessed_files = total_files - processed_files
             
-            total_chunks = sum(
-                file_info.get('chunks_count', 0) 
-                for file_info in processed_data.get('processed_files', {}).values()
-            )
+            if 'total_chunks' in processed_data:
+                total_chunks = processed_data['total_chunks']
+            else:
+                total_chunks = sum(
+                    file_info.get('chunks_count', 0)
+                    for file_info in processed_data.get('processed_files', {}).values()
+                )
             
             return {
                 'total_files': total_files,
