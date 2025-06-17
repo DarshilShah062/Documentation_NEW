@@ -174,10 +174,13 @@ class DocumentProcessor:
             processed_files = len(processed_data.get('processed_files', {}))
             unprocessed_files = total_files - processed_files
             
-            total_chunks = sum(
-                file_info.get('chunks_count', 0) 
-                for file_info in processed_data.get('processed_files', {}).values()
-            )
+            if 'total_chunks' in processed_data:
+                total_chunks = processed_data['total_chunks']
+            else:
+                total_chunks = sum(
+                    file_info.get('chunks_count', 0)
+                    for file_info in processed_data.get('processed_files', {}).values()
+                )
             
             return {
                 'total_files': total_files,
