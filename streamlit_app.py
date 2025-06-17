@@ -31,6 +31,7 @@ st.markdown("""
         margin-bottom: 1rem;
         font-weight: bold;
         font-size: 1.2rem;
+        color: #000;
     }
     .metric-card {
         background: white;
@@ -38,6 +39,7 @@ st.markdown("""
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border-left: 4px solid #28a745;
+        color: #000;
     }
     .status-badge {
         padding: 0.25rem 0.75rem;
@@ -59,6 +61,7 @@ st.markdown("""
         border-radius: 8px;
         margin: 0.5rem 0;
         border-left: 3px solid #007bff;
+        color: #000;
     }
     .stCheckbox > label {
         font-size: 0px !important;
@@ -135,7 +138,7 @@ def main():
         "📝 Add Document", 
         "🔍 Process Documents", 
         "📋 File Manager", 
-        "🔍 Search & Test"
+        "🔍 Search"
     ])
     
     with tab1:
@@ -726,8 +729,8 @@ def process_files_batch(selected_files):
         st.balloons()
 
 def show_search_interface():
-    """Search interface for testing the knowledge base"""
-    st.markdown('<div class="section-header">🔍 Search & Test Knowledge Base</div>', unsafe_allow_html=True)
+    """Search interface for the knowledge base"""
+    st.markdown('<div class="section-header">🔍 Search Knowledge Base</div>', unsafe_allow_html=True)
     
     # Check if there are processed files
     stats = st.session_state.processor.get_processing_stats()
@@ -777,28 +780,6 @@ def show_search_interface():
                 relevance = 100 - (i * 10)  # Simple decreasing relevance
                 st.progress(relevance / 100, text=f"Relevance: {relevance}%")
     
-    # Quick test queries
-    st.markdown("### 🎯 Quick Test Queries")
-    st.markdown("Try these example queries to test your knowledge base:")
-    
-    example_queries = [
-        "What are the main features?",
-        "How to get started?",
-        "Installation instructions",
-        "API documentation",
-        "Troubleshooting guide"
-    ]
-    
-    col1, col2 = st.columns(2)
-    
-    for i, example in enumerate(example_queries):
-        col = col1 if i % 2 == 0 else col2
-        
-        with col:
-            if st.button(f"🔍 {example}", key=f"example_{i}"):
-                # Auto-fill the search form
-                st.session_state.example_query = example
-                st.rerun()
 
 if __name__ == "__main__":
     main()
