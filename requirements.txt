@@ -5,7 +5,8 @@ langchain==0.0.335
 langchain-openai==0.0.2
 langchain-pinecone==0.0.1
 python-dotenv==1.0.0
-pandas==2.1.3
+pandas>=2.2,<3.0
+
 
 # Google Drive Integration (Required)
 google-api-python-client==2.108.0
