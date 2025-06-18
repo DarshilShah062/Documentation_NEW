@@ -214,22 +214,24 @@ class DocumentProcessor:
             
             if not target_file:
                 return {'success': False, 'error': 'File not found in Drive'}
-            
-            # Remove from processed files record
-            self.drive_manager.remove_processed_file(file_name)
-            
-            # Delete existing vectors from Pinecone (if possible)
-            # Note: This requires implementing vector deletion by metadata
-            try:
-                # This is a simplified approach - in production you might want
-                # more sophisticated vector management
-                pass
-            except Exception as e:
-                print(f"Warning: Could not clean up old vectors: {e}")
-            
+
+            # Remove existing vectors if recorded
+            processed_data = self.drive_manager.get_processed_files_data()
+            file_info = processed_data.get('processed_files', {}).get(file_name)
+            if file_info:
+                vector_ids = file_info.get('vector_ids', [])
+                if vector_ids and hasattr(self, 'vectorstore') and self.vectorstore:
+                    try:
+                        self.vectorstore.delete(ids=vector_ids)
+                    except Exception as e:
+                        print(f"Error deleting vectors: {e}")
+
+                # Remove from processed files record
+                self.drive_manager.remove_processed_file(file_name)
+
             # Process the file again
             result = self.process_single_file_from_drive(target_file['id'], file_name)
-            
+
             return result
             
         except Exception as e:
