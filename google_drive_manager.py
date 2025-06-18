@@ -361,9 +361,39 @@ class GoogleDriveManager:
             ).execute()
             
             return file.get('id')
-            
+
         except Exception as e:
             print(f"Error uploading file: {e}")
+            return None
+
+    def upload_file_object(self, file_data, filename, mime_type='application/octet-stream'):
+        """Upload a binary file object to Google Drive"""
+        try:
+            if not self.service:
+                return None
+
+            # Prevent overwriting existing files
+            if self.file_exists(filename):
+                print(f"File '{filename}' already exists in Drive")
+                return None
+
+            media = MediaIoBaseUpload(io.BytesIO(file_data), mimetype=mime_type)
+
+            file_metadata = {
+                'name': filename,
+                'parents': [self.folder_id]
+            }
+
+            file = self.service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+
+            return file.get('id')
+
+        except Exception as e:
+            print(f"Error uploading file object: {e}")
             return None
     
     def delete_file(self, file_id):

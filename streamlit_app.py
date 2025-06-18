@@ -302,14 +302,19 @@ def show_process_documents():
             )
             
             if st.button("🔄 Reprocess Selected File", type="secondary"):
-                with st.spinner("Reprocessing file..."):
-                    result = st.session_state.processor.reprocess_file(selected_reprocess)
-                    
+                if not st.session_state.get("confirm_reprocess", False):
+                    st.session_state.confirm_reprocess = True
+                    st.warning("⚠️ Click the button again to confirm reprocessing")
+                else:
+                    with st.spinner("Reprocessing file..."):
+                        result = st.session_state.processor.reprocess_file(selected_reprocess)
+
                     if result['success']:
                         st.success(f"✅ File reprocessed: {selected_reprocess} ({result['chunks']} chunks)")
                         st.rerun()
                     else:
                         st.error(f"❌ Reprocessing failed: {result['error']}")
+                    st.session_state.confirm_reprocess = False
         
         return
     
@@ -515,14 +520,19 @@ def show_file_manager():
                                 st.error(f"❌ Processing failed: {result['error']}")
                 else:
                     if st.button(f"🔄 Reprocess {file['name']}", key=f"reprocess_{i}", type="secondary"):
-                        with st.spinner(f"Reprocessing {file['name']}..."):
-                            result = st.session_state.processor.reprocess_file(file['name'])
-                            
+                        if not st.session_state.get(f"confirm_reprocess_{i}", False):
+                            st.session_state[f"confirm_reprocess_{i}"] = True
+                            st.warning("⚠️ Click the button again to confirm reprocessing")
+                        else:
+                            with st.spinner(f"Reprocessing {file['name']}..."):
+                                result = st.session_state.processor.reprocess_file(file['name'])
+
                             if result['success']:
                                 st.success(f"✅ Reprocessed! {result['chunks']} chunks created")
                                 st.rerun()
                             else:
                                 st.error(f"❌ Reprocessing failed: {result['error']}")
+                            st.session_state[f"confirm_reprocess_{i}"] = False
                 
                 if st.button(f"🗑️ Delete {file['name']}", key=f"delete_{i}", type="secondary"):
                     if st.session_state.get(f"confirm_delete_{i}", False):
@@ -587,8 +597,8 @@ def show_add_document():
             )
         
         content = st.text_area(
-            "📄 Markdown Content", 
-            height=400, 
+            "📄 Markdown Content",
+            height=400,
             placeholder="""# Document Title
 
 ## Overview
@@ -640,6 +650,49 @@ Summary of the document...
                         st.error("❌ Failed to upload document to Google Drive")
             else:
                 st.error("❌ Please provide both filename and content")
+
+    st.markdown("---")
+    st.markdown("### 📤 Upload Files from Your Device")
+
+    uploaded_files = st.file_uploader(
+        "Select Markdown files to upload",
+        type=["md", "txt"],
+        accept_multiple_files=True,
+        key="local_file_uploader",
+    )
+
+    if uploaded_files:
+        auto_process_files = st.checkbox(
+            "🔄 Auto-process uploaded files",
+            key="auto_process_upload",
+            value=False,
+        )
+
+        if st.button("☁️ Upload Selected File(s)"):
+            for up_file in uploaded_files:
+                file_bytes = up_file.read()
+                filename = up_file.name
+
+                if st.session_state.drive_manager.file_exists(filename):
+                    st.error(f"❌ A file named '{filename}' already exists in Google Drive")
+                    continue
+
+                with st.spinner(f"Uploading {filename}..."):
+                    file_id = st.session_state.drive_manager.upload_file_object(file_bytes, filename, up_file.type)
+
+                if file_id:
+                    st.success(f"✅ Uploaded {filename}")
+
+                    if auto_process_files:
+                        with st.spinner(f"Processing {filename}..."):
+                            result = st.session_state.processor.process_single_file_from_drive(file_id, filename)
+
+                            if result['success']:
+                                st.success(f"✅ Processed {filename} ({result['chunks']} chunks)")
+                            else:
+                                st.error(f"❌ Processing failed for {filename}: {result['error']}")
+                else:
+                    st.error(f"❌ Failed to upload {filename}")
 
 def process_files_individually(selected_files):
     """Process files one by one with individual progress"""
