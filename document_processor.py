@@ -123,11 +123,11 @@ class DocumentProcessor:
                 }
                 metadatas.append(metadata)
             
-            # Add to vector store
-            self.vectorstore.add_texts(chunks, metadatas=metadatas)
-            
-            # Update processed files record in Drive
-            self.drive_manager.add_processed_file(file_name, file_id, len(chunks))
+            # Add to vector store and capture vector IDs
+            vector_ids = self.vectorstore.add_texts(chunks, metadatas=metadatas)
+
+            # Update processed files record in Drive with stored vector IDs
+            self.drive_manager.add_processed_file(file_name, file_id, len(chunks), vector_ids)
             
             return {
                 'success': True, 
@@ -234,6 +234,33 @@ class DocumentProcessor:
             
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+    def delete_file(self, file_id, file_name):
+        """Delete file from Drive and remove its vectors"""
+        try:
+            # Delete file from Drive
+            success = self.drive_manager.delete_file(file_id)
+            if not success:
+                return False
+
+            # Remove vectors if we have them recorded
+            processed_data = self.drive_manager.get_processed_files_data()
+            file_info = processed_data.get('processed_files', {}).get(file_name)
+            if file_info:
+                vector_ids = file_info.get('vector_ids', [])
+                if vector_ids and hasattr(self, 'vectorstore') and self.vectorstore:
+                    try:
+                        self.vectorstore.delete(ids=vector_ids)
+                    except Exception as e:
+                        print(f"Error deleting vectors: {e}")
+
+                self.drive_manager.remove_processed_file(file_name)
+
+            return True
+
+        except Exception as e:
+            print(f"Error deleting file and vectors: {e}")
+            return False
     
     def remove_file_from_processing(self, file_name):
         """Remove file from processed files list (for cleanup)"""
