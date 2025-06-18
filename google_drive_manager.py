@@ -208,16 +208,20 @@ class GoogleDriveManager:
         processed_data = self.get_processed_files_data()
         return filename in processed_data.get('processed_files', {})
     
-    def add_processed_file(self, filename, file_id, chunks_count):
+    def add_processed_file(self, filename, file_id, chunks_count, vector_ids=None):
         """Add file to processed files record"""
         try:
             processed_data = self.get_processed_files_data()
-            
-            processed_data['processed_files'][filename] = {
+
+            file_record = {
                 'file_id': file_id,
                 'chunks_count': chunks_count,
                 'processed_date': datetime.now().isoformat()
             }
+            if vector_ids is not None:
+                file_record['vector_ids'] = vector_ids
+
+            processed_data['processed_files'][filename] = file_record
             
             # Update total chunks
             processed_data['total_chunks'] = sum(
@@ -312,11 +316,32 @@ class GoogleDriveManager:
         except Exception as e:
             print(f"Error getting folder info: {e}")
             return None
+
+    def file_exists(self, filename):
+        """Check if a file with the given name exists in Drive"""
+        try:
+            if not self.service:
+                return False
+
+            results = self.service.files().list(
+                q=f"'{self.folder_id}' in parents and name='{filename}' and trashed=false",
+                fields="files(id)"
+            ).execute()
+            return len(results.get('files', [])) > 0
+
+        except Exception as e:
+            print(f"Error checking file existence: {e}")
+            return False
     
     def upload_content_as_file(self, content, filename):
         """Upload content as a file to Google Drive"""
         try:
             if not self.service:
+                return None
+
+            # Prevent uploading if a file with the same name already exists
+            if self.file_exists(filename):
+                print(f"File '{filename}' already exists in Drive")
                 return None
             
             media = MediaIoBaseUpload(

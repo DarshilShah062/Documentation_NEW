@@ -528,11 +528,8 @@ def show_file_manager():
                     if st.session_state.get(f"confirm_delete_{i}", False):
                         # Perform deletion
                         with st.spinner("Deleting..."):
-                            success = st.session_state.drive_manager.delete_file(file['id'])
+                            success = st.session_state.processor.delete_file(file['id'], file['name'])
                             if success:
-                                # Also remove from processed files if it was processed
-                                if file['is_processed']:
-                                    st.session_state.drive_manager.remove_processed_file(file['name'])
                                 st.success(f"✅ Deleted {file['name']}")
                                 st.rerun()
                             else:
@@ -614,11 +611,15 @@ Summary of the document...
         )
         
         submit_button = st.form_submit_button("☁️ Save to Google Drive", type="primary")
-        
+
         if submit_button:
             if filename and content:
                 full_filename = filename + '.md'
-                
+
+                if st.session_state.drive_manager.file_exists(full_filename):
+                    st.error(f"❌ A file named '{full_filename}' already exists in Google Drive")
+                    return
+
                 with st.spinner("Uploading to Google Drive..."):
                     file_id = st.session_state.drive_manager.upload_content_as_file(content, full_filename)
                     
